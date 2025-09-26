@@ -1,16 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { 
-  FileText, 
+  User, 
   Folder, 
-  Calculator, 
-  Play, 
-  BookOpen, 
-  MessageCircle,
-  Users,
-  Map,
-  Briefcase,
-  Trash2,
-  Package
+  GraduationCap, 
+  Award, 
+  Rocket, 
+  Mail,
+  Instagram,
+  Linkedin
 } from 'lucide-react';
 
 interface IconPosition {
@@ -23,34 +20,321 @@ interface DesktopIcon {
   name: string;
   icon: any;
   position: IconPosition;
+  isSelected: boolean;
+  isDoubleClicked: boolean;
+}
+
+interface WindowState {
+  id: string;
+  title: string;
+  content: string;
+  iconPosition: IconPosition;
+  position: IconPosition;
+  size: { width: number; height: number };
+  isOpen: boolean;
+  isMinimized: boolean;
+  isAnimating: boolean;
+  animationType: 'opening' | 'closing' | 'minimizing' | 'restoring' | null;
+  zIndex: number;
+  isDragging: boolean;
+  isResizing: boolean;
 }
 
 function App() {
-  const [activeIcon, setActiveIcon] = useState<string | null>(null);
+  console.log('App component is rendering...');
+  const [selectedIcon, setSelectedIcon] = useState<string | null>(null);
   const [draggedIcon, setDraggedIcon] = useState<string | null>(null);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [openWindows, setOpenWindows] = useState<WindowState[]>([]);
+  const [nextZIndex, setNextZIndex] = useState(100);
+  const [draggedWindow, setDraggedWindow] = useState<string | null>(null);
+  const [windowDragOffset, setWindowDragOffset] = useState({ x: 0, y: 0 });
+  const [resizingWindow, setResizingWindow] = useState<string | null>(null);
+  const [resizeStartPos, setResizeStartPos] = useState({ x: 0, y: 0 });
+  const [resizeStartSize, setResizeStartSize] = useState({ width: 0, height: 0 });
+
+  // Grid configuration - increased spacing
+  const ICON_WIDTH = 80; // Horizontal spacing between icons
+  const ICON_HEIGHT = 90; // Vertical spacing between icons (more space for text)
+  const GRID_COLS = 2; // Number of columns
+  const GRID_START_X = 10; // Starting X position
+  const GRID_START_Y = 30; // Starting Y position
+
+  // Calculate grid positions automatically with proper spacing
+  const calculateGridPosition = (index: number) => {
+    const col = index % GRID_COLS;
+    const row = Math.floor(index / GRID_COLS);
+    return {
+      x: GRID_START_X + (col * ICON_WIDTH),
+      y: GRID_START_Y + (row * ICON_HEIGHT)
+    };
+  };
 
   const [leftIcons, setLeftIcons] = useState<DesktopIcon[]>([
-    { id: 'home', name: 'home.mdx', icon: FileText, position: { x: 0, y: 0 } },
-    { id: 'product', name: 'Product OS', icon: Folder, position: { x: 0, y: 80 } },
-    { id: 'pricing', name: 'Pricing', icon: Calculator, position: { x: 0, y: 160 } },
-    { id: 'customers', name: 'customers.mdx', icon: FileText, position: { x: 0, y: 240 } },
-    { id: 'demo', name: 'demo.mov', icon: Play, position: { x: 0, y: 320 } },
-    { id: 'docs', name: 'Docs', icon: BookOpen, position: { x: 0, y: 400 } },
-    { id: 'talk', name: 'Talk to a human', icon: MessageCircle, position: { x: 0, y: 480 } },
+    // Personal portfolio icons
+    { id: 'about', name: 'Ben kimim', icon: User, position: calculateGridPosition(0), isSelected: false, isDoubleClicked: false },
+    { id: 'projects', name: 'Projelerim klasörü', icon: Folder, position: calculateGridPosition(1), isSelected: false, isDoubleClicked: false },
+    { id: 'education', name: 'Eğitim', icon: GraduationCap, position: calculateGridPosition(2), isSelected: false, isDoubleClicked: false },
+    { id: 'experience', name: 'Deneyimlerim', icon: Award, position: calculateGridPosition(3), isSelected: false, isDoubleClicked: false },
+    { id: 'startup', name: 'Main Startup', icon: Rocket, position: calculateGridPosition(4), isSelected: false, isDoubleClicked: false },
+    // Social media contact icons
+    { id: 'instagram', name: 'Instagram', icon: Instagram, position: calculateGridPosition(5), isSelected: false, isDoubleClicked: false },
+    { id: 'email', name: 'Email', icon: Mail, position: calculateGridPosition(6), isSelected: false, isDoubleClicked: false },
+    { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, position: calculateGridPosition(7), isSelected: false, isDoubleClicked: false },
   ]);
 
   const [rightIcons, setRightIcons] = useState<DesktopIcon[]>([
-    { id: 'why', name: 'Why PostHog?', icon: Users, position: { x: 0, y: 0 } },
-    { id: 'roadmap', name: 'Roadmap', icon: Map, position: { x: 0, y: 80 } },
-    { id: 'forums', name: 'Forums', icon: MessageCircle, position: { x: 0, y: 160 } },
-    { id: 'handbook', name: 'Company handbook', icon: Briefcase, position: { x: 0, y: 240 } },
-    { id: 'work', name: 'Work here', icon: Briefcase, position: { x: 0, y: 320 } },
-    { id: 'trash', name: 'Trash', icon: Trash2, position: { x: 0, y: 400 } },
+    // Right side is now empty
   ]);
+
+  // Desktop-like icon behavior functions
+  // MacOS-style window management functions
+  const openWindow = useCallback((iconId: string, iconPosition: IconPosition) => {
+    const windowContent = getWindowContent(iconId);
+    
+    // Calculate center position for the window
+    const windowWidth = 1000; // Increased from 900
+    const windowHeight = 700; // Increased from 650
+    const centerX = window.innerWidth / 2 - windowWidth / 2;
+    const centerY = window.innerHeight / 2 - windowHeight / 2;
+    
+    const newWindow: WindowState = {
+      id: iconId,
+      title: windowContent.title,
+      content: windowContent.content,
+      iconPosition,
+      position: { x: centerX, y: centerY },
+      size: { width: windowWidth, height: windowHeight },
+      isOpen: false,
+      isMinimized: false,
+      isAnimating: true,
+      animationType: 'opening',
+      zIndex: nextZIndex,
+      isDragging: false,
+      isResizing: false
+    };
+
+    setOpenWindows(prev => [...prev, newWindow]);
+    setNextZIndex(prev => prev + 1);
+
+    // Start opening animation with proper timing
+    setTimeout(() => {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === iconId 
+            ? { ...window, isOpen: true }
+            : window
+        )
+      );
+    }, 50);
+
+    // End animation after it completes
+    setTimeout(() => {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === iconId 
+            ? { ...window, isAnimating: false, animationType: null }
+            : window
+        )
+      );
+    }, 550);
+  }, [nextZIndex]);
+
+  const minimizeWindow = useCallback((windowId: string) => {
+    setOpenWindows(prev => 
+      prev.map(window => 
+        window.id === windowId 
+          ? { ...window, isMinimized: true, isAnimating: true, animationType: 'minimizing' }
+          : window
+      )
+    );
+
+    setTimeout(() => {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === windowId 
+            ? { ...window, isAnimating: false, animationType: null }
+            : window
+        )
+      );
+    }, 500);
+  }, []);
+
+  const restoreWindow = useCallback((windowId: string) => {
+    console.log(`Restoring window: ${windowId}`);
+    
+    // Start restore animation - window should start minimized and animate to restored
+    setOpenWindows(prev => 
+      prev.map(window => 
+        window.id === windowId 
+          ? { 
+              ...window, 
+              isAnimating: true, 
+              animationType: 'restoring',
+              zIndex: nextZIndex,
+              isMinimized: true // Start as minimized for animation
+            }
+          : window
+      )
+    );
+    setNextZIndex(prev => prev + 1);
+
+    // Then start restoring after brief delay
+    setTimeout(() => {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === windowId 
+            ? { ...window, isMinimized: false }
+            : window
+        )
+      );
+    }, 50);
+
+    // End animation
+    setTimeout(() => {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === windowId 
+            ? { ...window, isAnimating: false, animationType: null }
+            : window
+        )
+      );
+    }, 550);
+  }, [nextZIndex]);
+
+  const closeWindow = useCallback((windowId: string) => {
+    setOpenWindows(prev => 
+      prev.map(window => 
+        window.id === windowId 
+          ? { ...window, isAnimating: true, animationType: 'closing' }
+          : window
+      )
+    );
+
+    setTimeout(() => {
+      setOpenWindows(prev => prev.filter(window => window.id !== windowId));
+    }, 500);
+  }, []);
+
+  const getWindowContent = (iconId: string) => {
+    const contents: Record<string, {title: string, content: string}> = {
+      about: { title: 'Ben Kimim', content: 'Merhaba! Ben Yunus Emre ALSANCAK. Full-stack developer olarak çalışıyorum.' },
+      projects: { title: 'Projelerim', content: 'Geliştirdiğim projeler ve portföy çalışmalarım burada yer alıyor.' },
+      education: { title: 'Eğitim', content: 'Eğitim geçmişim ve aldığım sertifikalar hakkında bilgiler.' },
+      experience: { title: 'Deneyimlerim', content: 'Profesyonel iş deneyimlerim ve kariyerim hakkında detaylar.' },
+      startup: { title: 'Main Startup', content: 'Girişimcilik projelerim ve startup deneyimlerim.' },
+      instagram: { title: 'Instagram', content: 'Instagram profilime buradan ulaşabilirsiniz.' },
+      email: { title: 'Email', content: 'Benimle email üzerinden iletişime geçin.' },
+      linkedin: { title: 'LinkedIn', content: 'LinkedIn profilim ve profesyonel ağım.' }
+    };
+    return contents[iconId] || { title: 'Bilinmeyen', content: 'İçerik bulunamadı.' };
+  };
+
+  const handleIconDoubleClick = useCallback((iconId: string, isRightSide: boolean) => {
+    console.log(`Double clicked on ${iconId}`);
+    
+    // Get icon position for animation
+    const icons = isRightSide ? rightIcons : leftIcons;
+    const icon = icons.find(i => i.id === iconId);
+    if (!icon) return;
+
+    // Check if window is already open
+    const existingWindow = openWindows.find(w => w.id === iconId);
+    if (existingWindow) {
+      // If window exists, bring to front or close
+      if (existingWindow.isOpen) {
+        closeWindow(iconId);
+      } else {
+        // Bring to front
+        setOpenWindows(prev => 
+          prev.map(window => 
+            window.id === iconId 
+              ? { ...window, zIndex: nextZIndex }
+              : window
+          )
+        );
+        setNextZIndex(prev => prev + 1);
+      }
+    } else {
+      // Open new window
+      openWindow(iconId, icon.position);
+    }
+    
+    // Update icon state for double click feedback
+    const updateIcons = (icons: DesktopIcon[]) => 
+      icons.map(icon => ({
+        ...icon,
+        isSelected: icon.id === iconId ? false : false,
+        isDoubleClicked: icon.id === iconId ? true : false
+      }));
+
+    if (isRightSide) {
+      setRightIcons(prevIcons => updateIcons(prevIcons));
+    } else {
+      setLeftIcons(prevIcons => updateIcons(prevIcons));
+    }
+    
+    // Clear double click state
+    setTimeout(() => {
+      const clearIcons = (icons: DesktopIcon[]) => 
+        icons.map(icon => ({
+          ...icon,
+          isDoubleClicked: false
+        }));
+
+      if (isRightSide) {
+        setRightIcons(prevIcons => clearIcons(prevIcons));
+      } else {
+        setLeftIcons(prevIcons => clearIcons(prevIcons));
+      }
+    }, 200);
+  }, [openWindows, nextZIndex, openWindow, closeWindow, rightIcons, leftIcons]);
+
+  const handleIconClick = useCallback((iconId: string, isRightSide: boolean) => {
+    // Don't process click if drag is in progress
+    if (draggedIcon) return;
+    
+    // If this icon is already selected, this might be a double click
+    if (selectedIcon === iconId) {
+      handleIconDoubleClick(iconId, isRightSide);
+      return;
+    }
+
+    // Single click - select the icon
+    setSelectedIcon(iconId);
+    
+    // Update icon selection
+    const updateIcons = (icons: DesktopIcon[]) => 
+      icons.map(icon => ({
+        ...icon,
+        isSelected: icon.id === iconId ? true : false,
+        isDoubleClicked: false
+      }));
+
+    if (isRightSide) {
+      setRightIcons(prevIcons => updateIcons(prevIcons));
+    } else {
+      setLeftIcons(prevIcons => updateIcons(prevIcons));
+    }
+  }, [selectedIcon, draggedIcon, handleIconDoubleClick]);
+
+
+  const handleDesktopClick = useCallback((e: React.MouseEvent) => {
+    // If clicking on empty desktop area, deselect all icons
+    if (e.target === e.currentTarget) {
+      setSelectedIcon(null);
+      setLeftIcons(prevIcons => prevIcons.map(icon => ({ ...icon, isSelected: false, isDoubleClicked: false })));
+      setRightIcons(prevIcons => prevIcons.map(icon => ({ ...icon, isSelected: false, isDoubleClicked: false })));
+    }
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent, iconId: string, isRightSide: boolean) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    // Start drag only after a delay (to distinguish from click)
+    const dragStartDelay = setTimeout(() => {
     setDraggedIcon(iconId);
     
     const icons = isRightSide ? rightIcons : leftIcons;
@@ -62,6 +346,10 @@ function App() {
         y: e.clientY - rect.top
       });
     }
+    }, 150); // 150ms delay before drag starts
+
+    // Store the timeout so we can cancel it on mouseup
+    setClickTimeout(dragStartDelay);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -96,70 +384,218 @@ function App() {
   };
 
   const handleMouseUp = () => {
+    // Cancel drag timeout if mouse is released before drag starts
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      setClickTimeout(null);
+    }
+    
     setDraggedIcon(null);
     setDragOffset({ x: 0, y: 0 });
   };
 
+  // Window dragging handlers
+  const handleWindowMouseDown = useCallback((e: React.MouseEvent, windowId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const window = openWindows.find(w => w.id === windowId);
+    if (!window) return;
+    
+    setDraggedWindow(windowId);
+    setWindowDragOffset({
+      x: e.clientX - window.position.x,
+      y: e.clientY - window.position.y
+    });
+    
+    // Bring window to front
+    setOpenWindows(prev => 
+      prev.map(w => 
+        w.id === windowId 
+          ? { ...w, zIndex: nextZIndex, isDragging: true }
+          : w
+      )
+    );
+    setNextZIndex(prev => prev + 1);
+  }, [openWindows, nextZIndex]);
+
+  const handleWindowMouseMove = useCallback((e: React.MouseEvent) => {
+    if (draggedWindow) {
+      const newX = e.clientX - windowDragOffset.x;
+      const newY = e.clientY - windowDragOffset.y;
+      
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === draggedWindow 
+            ? { ...window, position: { x: Math.max(0, newX), y: Math.max(0, newY) } }
+            : window
+        )
+      );
+    }
+    
+    if (resizingWindow) {
+      const window = openWindows.find(w => w.id === resizingWindow);
+      if (!window) return;
+      
+      const deltaX = e.clientX - resizeStartPos.x;
+      const deltaY = e.clientY - resizeStartPos.y;
+      
+      const newWidth = Math.max(400, resizeStartSize.width + deltaX);
+      const newHeight = Math.max(300, resizeStartSize.height + deltaY);
+      
+      setOpenWindows(prev => 
+        prev.map(w => 
+          w.id === resizingWindow 
+            ? { ...w, size: { width: newWidth, height: newHeight } }
+            : w
+        )
+      );
+    }
+  }, [draggedWindow, windowDragOffset, resizingWindow, resizeStartPos, resizeStartSize, openWindows]);
+
+  const handleWindowMouseUp = useCallback(() => {
+    if (draggedWindow) {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === draggedWindow 
+            ? { ...window, isDragging: false }
+            : window
+        )
+      );
+      setDraggedWindow(null);
+      setWindowDragOffset({ x: 0, y: 0 });
+    }
+    
+    if (resizingWindow) {
+      setOpenWindows(prev => 
+        prev.map(window => 
+          window.id === resizingWindow 
+            ? { ...window, isResizing: false }
+            : window
+        )
+      );
+      setResizingWindow(null);
+    }
+  }, [draggedWindow, resizingWindow]);
+
+  // Window resizing handlers
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent, windowId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const window = openWindows.find(w => w.id === windowId);
+    if (!window) return;
+    
+    setResizingWindow(windowId);
+    setResizeStartPos({ x: e.clientX, y: e.clientY });
+    setResizeStartSize({ width: window.size.width, height: window.size.height });
+    
+    setOpenWindows(prev => 
+      prev.map(w => 
+        w.id === windowId 
+          ? { ...w, isResizing: true }
+          : w
+      )
+    );
+  }, [openWindows]);
+
   return (
     <div 
-      className="min-h-screen bg-gradient-to-br from-yellow-100 via-orange-50 to-yellow-200 relative overflow-hidden select-none"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      className="dark h-screen w-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden select-none fixed inset-0"
+      onMouseMove={(e) => {
+        handleMouseMove(e);
+        handleWindowMouseMove(e);
+      }}
+      onMouseUp={() => {
+        handleMouseUp();
+        handleWindowMouseUp();
+      }}
+      onMouseLeave={() => {
+        handleMouseUp();
+        handleWindowMouseUp();
+      }}
+      onClick={handleDesktopClick}
     >
       {/* Top Navigation Bar */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 px-4 py-2 flex items-center justify-between">
+      <div className="bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 px-4 py-2 flex items-center justify-between">
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-orange-500 rounded flex items-center justify-center">
-              <span className="text-white text-xs font-bold">P</span>
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <span className="text-white text-sm font-bold">👨‍💻</span>
             </div>
+            <span className="text-white font-semibold">Kişisel Portföy</span>
           </div>
           <nav className="flex items-center space-x-6 text-sm">
-            <a href="#" className="text-gray-700 hover:text-gray-900">Product OS</a>
-            <a href="#" className="text-gray-700 hover:text-gray-900">Pricing</a>
-            <a href="#" className="text-gray-700 hover:text-gray-900">Docs</a>
-            <a href="#" className="text-gray-700 hover:text-gray-900">Library</a>
-            <a href="#" className="text-gray-700 hover:text-gray-900">Company</a>
-            <a href="#" className="text-gray-700 hover:text-gray-900">More</a>
+            <a href="#" className="text-gray-300 hover:text-white">Hakkımda</a>
+            <a href="#" className="text-gray-300 hover:text-white">Projeler</a>
+            <a href="#" className="text-gray-300 hover:text-white">Eğitim</a>
+            <a href="#" className="text-gray-300 hover:text-white">Deneyim</a>
+            <a href="#" className="text-gray-300 hover:text-white">İletişim</a>
           </nav>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="text-sm text-gray-700 hover:text-gray-900">🔍</button>
-          <button className="text-sm text-gray-700 hover:text-gray-900">💬</button>
-          <button className="text-sm text-gray-700 hover:text-gray-900">1</button>
-          <button className="text-sm text-gray-700 hover:text-gray-900">👤</button>
-          <button className="bg-black text-white px-3 py-1 rounded text-sm hover:bg-gray-800">
-            Get started - free
+          <button className="text-sm text-gray-300 hover:text-white">🌙</button>
+          <button className="text-sm text-gray-300 hover:text-white">🔍</button>
+          <button className="text-sm text-gray-300 hover:text-white">⚙️</button>
+          <button className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-4 py-1.5 rounded-lg text-sm hover:from-blue-600 hover:to-purple-700 transition-all">
+            İletişime Geç
           </button>
         </div>
       </div>
 
       {/* Desktop Interface */}
-      <div className="flex h-screen">
+      <div className="flex h-full">
         {/* Left Sidebar with Desktop Icons */}
-        <div className="w-20 bg-transparent p-2 relative pt-8">
-          {leftIcons.map((item) => {
+        <div className="w-48 bg-transparent p-4 relative pt-12 overflow-visible">
+          {leftIcons.map((item, index) => {
             const IconComponent = item.icon;
             return (
               <div
                 key={item.id}
-                className={`absolute flex flex-col items-center cursor-pointer group ${
-                  activeIcon === item.id ? 'bg-blue-100/50 rounded-lg p-2' : 'p-2'
-                } ${draggedIcon === item.id ? 'z-50 opacity-80' : 'z-10'}`}
+                className={`absolute w-20 flex flex-col items-center cursor-pointer group transition-all duration-200 ${
+                  item.isSelected 
+                    ? 'bg-blue-500/30 border border-blue-400/50 rounded-lg pt-3 px-2 pb-2' 
+                    : 'pt-3 px-2 pb-2 hover:bg-gray-700/30 rounded-lg'
+                } ${
+                  item.isDoubleClicked 
+                    ? 'scale-110 bg-blue-400/50' 
+                    : ''
+                } ${
+                  draggedIcon === item.id 
+                    ? 'z-[9999] opacity-90 scale-105' 
+                    : 'z-10'
+                }`}
                 style={{
                   left: `${item.position.x}px`,
                   top: `${item.position.y}px`,
-                  transform: draggedIcon === item.id ? 'scale(1.1)' : 'scale(1)',
-                  transition: draggedIcon === item.id ? 'none' : 'transform 0.2s ease'
+                  transition: draggedIcon === item.id ? 'none' : 'all 0.2s ease'
                 }}
-                onClick={() => setActiveIcon(activeIcon === item.id ? null : item.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIconClick(item.id, false);
+                }}
                 onMouseDown={(e) => handleMouseDown(e, item.id, false)}
               >
-                <div className="w-12 h-12 bg-white/80 rounded-lg shadow-sm flex items-center justify-center group-hover:bg-white transition-colors">
-                  <IconComponent className="w-6 h-6 text-gray-700" />
+                <div className={`w-12 h-12 rounded-lg shadow-sm flex items-center justify-center transition-all duration-200 ${
+                  item.isSelected 
+                    ? 'bg-gray-700/90 border border-blue-400/30' 
+                    : 'bg-gray-800/80 group-hover:bg-gray-700'
+                } ${
+                  item.isDoubleClicked 
+                    ? 'bg-blue-600/50' 
+                    : ''
+                }`}>
+                  <IconComponent className={`w-6 h-6 transition-colors duration-200 ${
+                    item.isSelected 
+                      ? 'text-blue-300' 
+                      : 'text-gray-300 group-hover:text-white'
+                  }`} />
                 </div>
-                <span className="text-xs text-gray-700 mt-1 text-center leading-tight max-w-16">
+                <span className={`text-xs mt-1 text-center leading-tight w-full transition-colors duration-200 ${
+                  item.isSelected 
+                    ? 'text-blue-200' 
+                    : 'text-gray-300 group-hover:text-white'
+                }`}>
                   {item.name}
                 </span>
               </div>
@@ -169,73 +605,199 @@ function App() {
 
         {/* Main Content Area */}
         <div className="flex-1 relative">
-          {/* Central Isometric Illustration */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative">
-              {/* Isometric blocks representing PostHog features */}
-              <div className="relative w-96 h-96">
-                {/* Base platform */}
-                <div className="absolute bottom-0 right-1/4 w-32 h-32 bg-gradient-to-br from-green-400 to-green-600 transform rotate-45 skew-x-12 skew-y-12 rounded-lg shadow-lg"></div>
-                
-                {/* Analytics block */}
-                <div className="absolute bottom-16 right-1/3 w-24 h-24 bg-gradient-to-br from-blue-400 to-blue-600 transform rotate-45 skew-x-12 skew-y-12 rounded-lg shadow-lg"></div>
-                
-                {/* Feature flags block */}
-                <div className="absolute bottom-8 right-1/2 w-28 h-28 bg-gradient-to-br from-purple-400 to-purple-600 transform rotate-45 skew-x-12 skew-y-12 rounded-lg shadow-lg"></div>
-                
-                {/* Session recording block */}
-                <div className="absolute bottom-24 right-1/4 w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 transform rotate-45 skew-x-12 skew-y-12 rounded-lg shadow-lg"></div>
-                
-                {/* Central tower/building */}
-                <div className="absolute bottom-12 right-1/3 w-16 h-32 bg-gradient-to-b from-amber-600 to-amber-800 transform skew-x-12 rounded-t-lg shadow-xl"></div>
-                
-                {/* Characters/avatars */}
-                <div className="absolute bottom-4 right-1/4 w-8 h-8 bg-gradient-to-br from-pink-400 to-pink-600 rounded-full shadow-md"></div>
-                <div className="absolute bottom-6 right-1/2 w-8 h-8 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-full shadow-md"></div>
-                
-                {/* Trees/decorative elements */}
-                <div className="absolute bottom-8 right-1/5 w-6 h-12 bg-gradient-to-b from-green-300 to-green-500 rounded-full shadow-sm"></div>
-                <div className="absolute bottom-4 right-2/3 w-4 h-8 bg-gradient-to-b from-green-300 to-green-500 rounded-full shadow-sm"></div>
+          {/* Empty main content area */}
+        </div>
+      </div>
+
+      {/* CENTERED TEXT - Fixed positioning for perfect center */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-5">
+        <div className="text-center">
+          <h1 className="text-6xl font-bold mb-6 text-white leading-relaxed py-4">Hoşgeldiniz</h1>
+          <p className="text-2xl text-gray-300 mb-4">Yunus Emre ALSANCAK</p>
+          <div className="space-y-2 text-gray-400">
+            <p className="text-xl font-semibold">WebOS</p>
+            <p className="text-sm">Sol taraftaki klasörlere tıklayarak keşfedin</p>
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-4 max-w-md mx-auto text-sm text-gray-500">
+            <div className="bg-gray-800/30 rounded-lg p-3">
+              <p className="font-medium text-gray-300">📁 Portfolio</p>
+              <p>{leftIcons.filter(icon => ['about', 'projects', 'education', 'experience', 'startup'].includes(icon.id)).length} Klasör</p>
+            </div>
+            <div className="bg-gray-800/30 rounded-lg p-3">
+              <p className="font-medium text-gray-300">📞 İletişim</p>
+              <p>{leftIcons.filter(icon => ['instagram', 'email', 'linkedin'].includes(icon.id)).length} Platform</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Sidebar with Additional Icons */}
-        <div className="w-20 bg-transparent p-2 relative pt-8">
-          {rightIcons.map((item) => {
-            const IconComponent = item.icon;
-            return (
-              <div
-                key={item.id}
-                className={`absolute flex flex-col items-center cursor-pointer group ${
-                  activeIcon === item.id ? 'bg-blue-100/50 rounded-lg p-2' : 'p-2'
-                } ${draggedIcon === item.id ? 'z-50 opacity-80' : 'z-10'}`}
-                style={{
-                  left: `${item.position.x}px`,
-                  top: `${item.position.y}px`,
-                  transform: draggedIcon === item.id ? 'scale(1.1)' : 'scale(1)',
-                  transition: draggedIcon === item.id ? 'none' : 'transform 0.2s ease'
-                }}
-                onClick={() => setActiveIcon(activeIcon === item.id ? null : item.id)}
-                onMouseDown={(e) => handleMouseDown(e, item.id, true)}
-              >
-                <div className="w-12 h-12 bg-white/80 rounded-lg shadow-sm flex items-center justify-center group-hover:bg-white transition-colors">
-                  <IconComponent className="w-6 h-6 text-gray-700" />
-                </div>
-                <span className="text-xs text-gray-700 mt-1 text-center leading-tight max-w-16">
-                  {item.name}
-                </span>
+      {/* MacOS-style Bottom Taskbar */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="bg-gray-800/90 backdrop-blur-md rounded-2xl px-4 py-2 shadow-2xl border border-gray-700/50">
+          <div className="flex items-center space-x-3">
+            {openWindows.map((window) => {
+              // Find the original icon for this window
+              const originalIcon = leftIcons.find(icon => icon.id === window.id);
+              const IconComponent = originalIcon?.icon;
+              
+              return (
+                <button
+                  key={window.id}
+                  onClick={() => window.isMinimized ? restoreWindow(window.id) : minimizeWindow(window.id)}
+                  className={`w-12 h-12 rounded-xl transition-all duration-300 ${
+                    window.isMinimized 
+                      ? 'bg-gray-700/50 scale-90 opacity-70' 
+                      : 'bg-gray-600/80 scale-100 shadow-lg'
+                  } hover:scale-110 hover:bg-gray-500/80`}
+                  title={window.title}
+                >
+                  <div className="w-full h-full rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center">
+                    {IconComponent ? (
+                      <IconComponent className="w-6 h-6 text-white" />
+                    ) : (
+                      <span className="text-white text-xs font-medium">
+                        {window.title.charAt(0)}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
               </div>
-            );
-          })}
         </div>
       </div>
 
-      {/* Floating texture overlay */}
-      <div className="absolute inset-0 pointer-events-none opacity-20">
-        <div className="w-full h-full bg-gradient-to-br from-transparent via-orange-100/30 to-yellow-200/30"></div>
+      {/* Windows with MacOS-style animations */}
+      {openWindows.map((window) => {
+        // Don't render minimized windows unless they're animating
+        if (window.isMinimized && !window.isAnimating) return null;
+        
+            return (
+              <div
+            key={window.id}
+            className="fixed"
+                style={{
+              zIndex: window.zIndex,
+              left: window.isAnimating ? '50%' : `${window.position.x}px`,
+              top: window.isAnimating ? '50%' : `${window.position.y}px`,
+              width: `${window.size.width}px`,
+              height: `${window.size.height}px`,
+            transform: window.isAnimating
+              ? window.animationType === 'opening'
+                ? !window.isOpen 
+                  ? `translate(${window.iconPosition.x - window.size.width/2}px, ${window.iconPosition.y - window.size.height/2}px) scale(0.1)`
+                  : 'translate(-50%, -50%) scale(1)'
+                : window.animationType === 'closing'
+                ? `translate(${window.iconPosition.x - window.size.width/2}px, ${window.iconPosition.y - window.size.height/2}px) scale(0.1)`
+                : window.animationType === 'minimizing'
+                ? `translate(-50%, 200px) scale(0.2)`
+                : window.animationType === 'restoring'
+                ? window.isMinimized 
+                  ? `translate(-50%, 150px) scale(0.3)`
+                  : 'translate(-50%, -50%) scale(1)'
+                : 'translate(-50%, -50%) scale(1)'
+              : 'none',
+              opacity: window.isAnimating 
+              ? window.animationType === 'opening'
+                ? window.isOpen ? 1 : 0
+                : window.animationType === 'restoring'
+                ? window.isMinimized ? 0 : 1
+                : window.animationType === 'closing' || window.animationType === 'minimizing'
+                ? 0
+                : 1
+              : 1,
+              transition: window.isAnimating 
+                ? 'all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' 
+                : 'none',
+              display: window.isMinimized && !window.isAnimating ? 'none' : 'block',
+              cursor: window.isDragging ? 'grabbing' : 'default'
+            }}
+          >
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl border border-gray-600/50 h-full flex flex-col overflow-hidden backdrop-blur-sm relative">
+            {/* Modern Title Bar */}
+            <div 
+              className="bg-gradient-to-r from-gray-800/90 to-gray-700/90 px-6 py-4 flex items-center justify-between border-b border-gray-600/30 select-none backdrop-blur-md cursor-grab active:cursor-grabbing"
+              onMouseDown={(e) => handleWindowMouseDown(e, window.id)}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white text-sm">📁</span>
+                  </div>
+                  <h3 className="text-white font-semibold text-lg">{window.title}</h3>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    console.log(`Minimizing window: ${window.id}`);
+                    minimizeWindow(window.id);
+                  }}
+                  className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  title="Minimize"
+                >
+                  <span className="text-gray-800 text-sm font-bold">−</span>
+                </button>
+                <button 
+                  onClick={() => closeWindow(window.id)}
+                  className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  title="Close"
+                >
+                  <span className="text-white text-sm font-bold">×</span>
+                </button>
+        </div>
       </div>
+
+            {/* Window Content */}
+            <div className="flex-1 p-8 bg-gradient-to-br from-gray-800 to-gray-900 text-white overflow-auto">
+              <div className="space-y-6">
+                <h2 className="text-3xl font-bold text-white mb-4">{window.title}</h2>
+                <p className="text-xl leading-relaxed text-gray-200">{window.content}</p>
+                
+                {/* Sample content based on window type */}
+                {window.id === 'projects' && (
+                  <div className="grid grid-cols-2 gap-6 mt-8">
+                    <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 p-6 rounded-xl border border-gray-600/30 hover:border-blue-500/50 transition-all hover:shadow-lg backdrop-blur-sm">
+                      <h3 className="font-bold text-white text-lg mb-3">🌐 WebOS Projesi</h3>
+                      <p className="text-gray-300 leading-relaxed">React & TypeScript ile geliştirilen interaktif masaüstü deneyimi</p>
+                      <div className="mt-4 px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full inline-block">✨ Aktif Proje</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 p-6 rounded-xl border border-gray-600/30 hover:border-green-500/50 transition-all hover:shadow-lg backdrop-blur-sm">
+                      <h3 className="font-bold text-white text-lg mb-3">🛒 E-ticaret Platformu</h3>
+                      <p className="text-gray-300 leading-relaxed">Full-stack e-ticaret çözümü ve ödeme sistemi</p>
+                      <div className="mt-4 px-3 py-1 bg-green-500/20 text-green-300 text-sm rounded-full inline-block">✅ Tamamlandı</div>
+                    </div>
+                  </div>
+                )}
+                
+                {window.id === 'about' && (
+                  <div className="space-y-6 mt-8">
+                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 p-6 rounded-xl border border-blue-500/30 backdrop-blur-sm">
+                      <h3 className="font-bold text-blue-300 text-lg mb-3">👨‍💻 Hakkımda</h3>
+                      <p className="text-gray-300 leading-relaxed">Full-stack developer, React & Node.js uzmanı. Modern web teknolojileri ile kullanıcı deneyimi odaklı çözümler geliştiriyorum.</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-500/10 to-green-600/10 p-6 rounded-xl border border-green-500/30 backdrop-blur-sm">
+                      <h3 className="font-bold text-green-300 text-lg mb-3">🚀 Yetenekler</h3>
+                      <p className="text-gray-300 leading-relaxed">JavaScript, TypeScript, React, Node.js, Python, MongoDB, PostgreSQL, AWS</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Resize Handle */}
+            <div 
+              className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-gray-600/50 hover:bg-gray-500/70 transition-colors"
+              onMouseDown={(e) => handleResizeMouseDown(e, window.id)}
+              style={{
+                clipPath: 'polygon(100% 0%, 0% 100%, 100% 100%)',
+              }}
+            />
+          </div>
+      </div>
+        );
+      })}
     </div>
   );
 }

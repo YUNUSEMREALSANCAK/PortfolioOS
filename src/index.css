@@ -1,3 +1,101 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Disable all scrolling for true desktop experience */
+html, body {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+}
+
+/* Prevent scroll on all elements */
+* {
+  overflow-x: hidden;
+}
+
+/* Ensure no scrollbars appear anywhere */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Firefox scrollbar hide */
+html {
+  scrollbar-width: none;
+}
+
+/* Better font rendering for Turkish characters */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fix for descenders in Turkish characters */
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  padding-top: 0.1em;
+  padding-bottom: 0.1em;
+}
+
+/* Z-index layers for desktop experience */
+.dragged-icon {
+  z-index: 9999 !important;
+  position: relative;
+}
+
+/* Ensure dragged icons stay on top */
+.absolute {
+  position: absolute;
+}
+
+.z-\[9999\] {
+  z-index: 9999;
+}
+
+/* Windows-style smooth window animations */
+.window-opening {
+  transform-origin: var(--icon-x) var(--icon-y);
+  animation: windowOpenSmooth 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.window-closing {
+  transform-origin: var(--icon-x) var(--icon-y);
+  animation: windowCloseSmooth 0.4s cubic-bezier(0.55, 0.06, 0.68, 0.19) forwards;
+}
+
+@keyframes windowOpenSmooth {
+  0% {
+    transform: scale(0.05) translate(0, 0);
+    opacity: 0;
+    border-radius: 50%;
+  }
+  30% {
+    opacity: 0.6;
+    border-radius: 20px;
+  }
+  100% {
+    transform: scale(1) translate(-50%, -50%);
+    opacity: 1;
+    border-radius: 8px;
+  }
+}
+
+@keyframes windowCloseSmooth {
+  0% {
+    transform: scale(1) translate(-50%, -50%);
+    opacity: 1;
+    border-radius: 8px;
+  }
+  70% {
+    opacity: 0.6;
+    border-radius: 20px;
+  }
+  100% {
+    transform: scale(0.05) translate(0, 0);
+    opacity: 0;
+    border-radius: 50%;
+  }
+}

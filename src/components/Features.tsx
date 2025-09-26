@@ -36,13 +36,13 @@ const Features = () => {
   ];
 
   return (
-    <section className="py-24 bg-white">
+    <section className="py-24 bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             Everything you need to build better products
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
             From analytics to experimentation, PostHog provides all the tools you need 
             to understand your users and grow your business.
           </p>
@@ -52,15 +52,15 @@ const Features = () => {
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group p-8 rounded-xl bg-gray-50 hover:bg-white hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-200"
+              className="group p-8 rounded-xl bg-gray-800 hover:bg-gray-700 hover:shadow-lg transition-all duration-300 border border-transparent hover:border-gray-600"
             >
-              <div className="text-orange-500 mb-4 group-hover:scale-110 transition-transform">
+              <div className="text-orange-400 mb-4 group-hover:scale-110 transition-transform">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              <h3 className="text-xl font-semibold text-white mb-3">
                 {feature.title}
               </h3>
-              <p className="text-gray-600 leading-relaxed">
+              <p className="text-gray-300 leading-relaxed">
                 {feature.description}
               </p>
             </div>
