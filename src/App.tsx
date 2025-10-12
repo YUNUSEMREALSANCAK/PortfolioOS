@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   User, 
   Folder, 
@@ -74,12 +74,26 @@ function App() {
     { id: 'spendingtrackapp', name: 'SpendingTrackApp', icon: Folder, link: 'https://github.com/YUNUSEMREALSANCAK/spending-tracking-app-harcama-takip-uygulamas-' }
   ]);
 
-  // Grid configuration - increased spacing
-  const ICON_WIDTH = 80; // Horizontal spacing between icons
-  const ICON_HEIGHT = 90; // Vertical spacing between icons (more space for text)
-  const GRID_COLS = 2; // Number of columns
-  const GRID_START_X = 10; // Starting X position
-  const GRID_START_Y = 60; // Starting Y position - moved down from 30
+  // Responsive state for mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const updateIsMobile = () => setIsMobile(window.innerWidth < 640);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    window.addEventListener('orientationchange', updateIsMobile);
+    return () => {
+      window.removeEventListener('resize', updateIsMobile);
+      window.removeEventListener('orientationchange', updateIsMobile);
+    };
+  }, []);
+
+  // Grid configuration - responsive spacing
+  const ICON_WIDTH = isMobile ? 64 : 80; // Horizontal spacing between icons
+  const ICON_HEIGHT = isMobile ? 80 : 90; // Vertical spacing between icons (more space for text)
+  const GRID_COLS = isMobile ? 1 : 2; // Number of columns
+  const GRID_START_X = isMobile ? 6 : 10; // Starting X position
+  const GRID_START_Y = isMobile ? 50 : 60; // Starting Y position - moved down from 30
 
   // Calculate grid positions automatically with proper spacing
   const calculateGridPosition = (index: number) => {
@@ -90,6 +104,13 @@ function App() {
       y: GRID_START_Y + (row * ICON_HEIGHT)
     };
   };
+
+  // Recalculate icon positions on responsive breakpoint changes
+  useEffect(() => {
+    setLeftIcons(prev => prev.map((icon, idx) => ({ ...icon, position: calculateGridPosition(idx) })));
+    setRightIcons(prev => prev.map((icon, idx) => ({ ...icon, position: calculateGridPosition(idx) })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
 
   const [leftIcons, setLeftIcons] = useState<DesktopIcon[]>([
     // Personal portfolio icons
@@ -117,9 +138,9 @@ function App() {
   const openWindow = useCallback((iconId: string, iconPosition: IconPosition) => {
     const windowContent = getWindowContent(iconId);
     
-    // Calculate center position for the window
-    const windowWidth = 1000; // Increased from 900
-    const windowHeight = 700; // Increased from 650
+    // Calculate center position for the window (responsive)
+    const windowWidth = Math.min(1000, Math.max(320, window.innerWidth - 24));
+    const windowHeight = Math.min(700, Math.max(300, window.innerHeight - 120));
     const centerX = window.innerWidth / 2 - windowWidth / 2;
     const centerY = window.innerHeight / 2 - windowHeight / 2;
     
@@ -893,16 +914,16 @@ function App() {
       {/* Desktop Interface */}
       <div className="flex h-full">
         {/* Left Sidebar with Desktop Icons */}
-        <div className="w-48 bg-transparent p-4 relative pt-12 overflow-visible">
+        <div className="w-40 sm:w-48 bg-transparent p-2 sm:p-4 relative pt-10 sm:pt-12 overflow-visible">
           {leftIcons.map((item) => {
             const IconComponent = item.icon;
             return (
               <div
                 key={item.id}
-                className={`absolute w-20 flex flex-col items-center cursor-pointer group transition-all duration-200 ${
+                className={`absolute w-16 sm:w-20 flex flex-col items-center cursor-pointer group transition-all duration-200 ${
                   item.isSelected 
-                    ? 'bg-blue-500/30 border border-blue-400/50 rounded-lg pt-3 px-2 pb-2' 
-                    : 'pt-3 px-2 pb-2 rounded-lg hover:bg-gray-700/30'
+                    ? 'bg-blue-500/30 border border-blue-400/50 rounded-lg pt-2 sm:pt-3 px-2 pb-1.5 sm:pb-2' 
+                    : 'pt-2 sm:pt-3 px-2 pb-1.5 sm:pb-2 rounded-lg hover:bg-gray-700/30'
                 } ${
                   item.isDoubleClicked 
                     ? 'scale-110 bg-blue-400/50' 
@@ -923,7 +944,7 @@ function App() {
                 }}
                 onMouseDown={(e) => handleMouseDown(e, item.id, false)}
               >
-                <div className={`w-12 h-12 rounded-lg shadow-sm flex items-center justify-center transition-all duration-200 ${
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg shadow-sm flex items-center justify-center transition-all duration-200 ${
                   item.isSelected 
                     ? 'bg-gray-700/90 border border-blue-400/30' 
                     : 'bg-gray-800/80 group-hover:bg-gray-700'
@@ -932,13 +953,13 @@ function App() {
                     ? 'bg-blue-600/50' 
                     : ''
                 }`}>
-                  <IconComponent className={`w-6 h-6 transition-colors duration-200 ${
+                  <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 ${
                     item.isSelected 
                       ? 'text-blue-300' 
                       : 'text-gray-300 group-hover:text-white'
                   }`} />
                 </div>
-                <span className={`text-xs mt-1 text-center leading-tight w-full transition-colors duration-200 ${
+                <span className={`text-[10px] sm:text-xs mt-1 text-center leading-tight w-full transition-colors duration-200 ${
                   item.isSelected 
                     ? 'text-blue-200' 
                     : 'text-gray-300 group-hover:text-white'
@@ -957,9 +978,9 @@ function App() {
       </div>
 
       {/* CENTERED TEXT - Fixed positioning for perfect center */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-5">
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-5 px-3">
         <div className="text-center">
-          <h1 className="text-8xl font-light mb-8 leading-tight py-6 tracking-wider text-blue-400/90"
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-light mb-4 sm:mb-6 md:mb-8 leading-tight py-3 sm:py-4 md:py-6 tracking-wide sm:tracking-wider text-blue-400/90"
               style={{
                 fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                 fontWeight: 300,
@@ -968,7 +989,7 @@ function App() {
               }}>
             HOŞGELDİNİZ
           </h1>
-          <p className="text-4xl mb-6 font-semibold tracking-wide text-green-400/90" 
+          <p className="text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-5 md:mb-6 font-semibold tracking-wide text-green-400/90" 
              style={{ 
                fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                textShadow: '0 2px 8px rgba(74, 222, 128, 0.2)',
@@ -976,8 +997,8 @@ function App() {
              }}>
             Yunus Emre ALSANCAK
           </p>
-          <div className="space-y-3 text-cyan-300/90">
-            <p className="text-3xl font-medium tracking-wide"
+          <div className="space-y-2 sm:space-y-3 text-cyan-300/90">
+            <p className="text-xl sm:text-2xl md:text-3xl font-medium tracking-wide"
                style={{
                  fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                  letterSpacing: '0.02em',
@@ -985,7 +1006,7 @@ function App() {
                }}>
               WebOS
             </p>
-            <p className="text-lg font-normal text-gray-300/90" 
+            <p className="text-base sm:text-lg font-normal text-gray-300/90" 
                style={{ 
                  fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
                  letterSpacing: '0.01em'
@@ -997,9 +1018,9 @@ function App() {
         </div>
 
       {/* MacOS-style Bottom Taskbar */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="backdrop-blur-md rounded-2xl px-4 py-2 shadow-2xl border bg-gray-800/90 border-gray-700/50">
-          <div className="flex items-center space-x-3">
+      <div className="fixed bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="backdrop-blur-md rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2 shadow-2xl border bg-gray-800/90 border-gray-700/50">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {openWindows.map((window) => {
               // Find the original icon for this window
               const originalIcon = leftIcons.find(icon => icon.id === window.id);
@@ -1009,7 +1030,7 @@ function App() {
                 <button
                   key={window.id}
                   onClick={() => window.isMinimized ? restoreWindow(window.id) : minimizeWindow(window.id)}
-                  className={`w-12 h-12 rounded-xl transition-all duration-300 ${
+                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl transition-all duration-300 ${
                     window.isMinimized 
                       ? 'bg-gray-700/50 scale-90 opacity-70' 
                       : 'bg-gray-600/80 scale-100 shadow-lg'
@@ -1018,7 +1039,7 @@ function App() {
                 >
                   <div className="w-full h-full rounded-xl flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
                     {IconComponent ? (
-                      <IconComponent className="w-6 h-6 text-white" />
+                      <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     ) : (
                       <span className="text-xs font-medium text-white">
                         {window.title.charAt(0)}
@@ -1081,15 +1102,15 @@ function App() {
           <div className="rounded-2xl shadow-2xl border h-full flex flex-col overflow-hidden backdrop-blur-sm relative bg-gradient-to-br from-gray-900 to-gray-800 border-gray-600/50">
             {/* Modern Title Bar */}
             <div 
-              className="px-6 py-4 flex items-center justify-between border-b select-none backdrop-blur-md cursor-grab active:cursor-grabbing bg-gradient-to-r from-gray-800/90 to-gray-700/90 border-gray-600/30"
+              className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b select-none backdrop-blur-md cursor-grab active:cursor-grabbing bg-gradient-to-r from-gray-800/90 to-gray-700/90 border-gray-600/30"
               onMouseDown={(e) => handleWindowMouseDown(e, window.id)}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                    <span className="text-white text-sm">📁</span>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white text-xs sm:text-sm">📁</span>
                   </div>
-                  <h3 className="font-semibold text-lg text-white">{window.title}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-white">{window.title}</h3>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -1099,26 +1120,26 @@ function App() {
                     console.log(`Minimizing window: ${window.id}`);
                     minimizeWindow(window.id);
                   }}
-                  className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
                   title="Minimize"
                 >
-                  <span className="text-gray-800 text-sm font-bold">−</span>
+                  <span className="text-gray-800 text-xs sm:text-sm font-bold">−</span>
                 </button>
                 <button 
                   onClick={() => closeWindow(window.id)}
-                  className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
                   title="Close"
                 >
-                  <span className="text-white text-sm font-bold">×</span>
+                  <span className="text-white text-xs sm:text-sm font-bold">×</span>
                 </button>
         </div>
       </div>
 
             {/* Window Content */}
-            <div className="flex-1 p-8 overflow-auto bg-gradient-to-br from-gray-800 to-gray-900 text-white">
+            <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-auto bg-gradient-to-br from-gray-800 to-gray-900 text-white">
               <div className="space-y-6">
-                <h2 className="text-3xl font-bold mb-4 text-white">{window.title}</h2>
-                <p className="text-xl leading-relaxed text-gray-200">{window.content}</p>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-white">{window.title}</h2>
+                <p className="text-base sm:text-lg md:text-xl leading-relaxed text-gray-200">{window.content}</p>
                 
                 {/* Sample content based on window type */}
                 
