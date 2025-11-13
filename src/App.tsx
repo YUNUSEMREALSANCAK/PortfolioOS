@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
   User, 
   Folder, 
@@ -10,7 +10,18 @@ import {
   Linkedin,
   Github,
   Monitor,
-  Trash2
+  Trash2,
+  Target,
+  Star,
+  BarChart,
+  Code,
+  Brain,
+  Leaf,
+  Wallet,
+  Briefcase,
+  Calendar,
+  Building2,
+  MapPin
 } from 'lucide-react';
 
 interface IconPosition {
@@ -30,7 +41,7 @@ interface DesktopIcon {
 interface WindowState {
   id: string;
   title: string;
-  content: string;
+  content: string | JSX.Element;
   iconPosition: IconPosition;
   position: IconPosition;
   size: { width: number; height: number };
@@ -63,12 +74,26 @@ function App() {
     { id: 'spendingtrackapp', name: 'SpendingTrackApp', icon: Folder, link: 'https://github.com/YUNUSEMREALSANCAK/spending-tracking-app-harcama-takip-uygulamas-' }
   ]);
 
-  // Grid configuration - increased spacing
-  const ICON_WIDTH = 80; // Horizontal spacing between icons
-  const ICON_HEIGHT = 90; // Vertical spacing between icons (more space for text)
-  const GRID_COLS = 2; // Number of columns
-  const GRID_START_X = 10; // Starting X position
-  const GRID_START_Y = 60; // Starting Y position - moved down from 30
+  // Responsive state for mobile
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const updateIsMobile = () => setIsMobile(window.innerWidth < 640);
+    updateIsMobile();
+    window.addEventListener('resize', updateIsMobile);
+    window.addEventListener('orientationchange', updateIsMobile);
+    return () => {
+      window.removeEventListener('resize', updateIsMobile);
+      window.removeEventListener('orientationchange', updateIsMobile);
+    };
+  }, []);
+
+  // Grid configuration - responsive spacing
+  const ICON_WIDTH = isMobile ? 64 : 80; // Horizontal spacing between icons
+  const ICON_HEIGHT = isMobile ? 80 : 90; // Vertical spacing between icons (more space for text)
+  const GRID_COLS = isMobile ? 1 : 2; // Number of columns
+  const GRID_START_X = isMobile ? 6 : 10; // Starting X position
+  const GRID_START_Y = isMobile ? 50 : 60; // Starting Y position - moved down from 30
 
   // Calculate grid positions automatically with proper spacing
   const calculateGridPosition = (index: number) => {
@@ -79,6 +104,13 @@ function App() {
       y: GRID_START_Y + (row * ICON_HEIGHT)
     };
   };
+
+  // Recalculate icon positions on responsive breakpoint changes
+  useEffect(() => {
+    setLeftIcons(prev => prev.map((icon, idx) => ({ ...icon, position: calculateGridPosition(idx) })));
+    setRightIcons(prev => prev.map((icon, idx) => ({ ...icon, position: calculateGridPosition(idx) })));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]);
 
   const [leftIcons, setLeftIcons] = useState<DesktopIcon[]>([
     // Personal portfolio icons
@@ -106,9 +138,9 @@ function App() {
   const openWindow = useCallback((iconId: string, iconPosition: IconPosition) => {
     const windowContent = getWindowContent(iconId);
     
-    // Calculate center position for the window
-    const windowWidth = 1000; // Increased from 900
-    const windowHeight = 700; // Increased from 650
+    // Calculate center position for the window (responsive)
+    const windowWidth = Math.min(1000, Math.max(320, window.innerWidth - 24));
+    const windowHeight = Math.min(700, Math.max(300, window.innerHeight - 120));
     const centerX = window.innerWidth / 2 - windowWidth / 2;
     const centerY = window.innerHeight / 2 - windowHeight / 2;
     
@@ -231,17 +263,336 @@ function App() {
   }, []);
 
   const getWindowContent = (iconId: string) => {
-    const contents: Record<string, {title: string, content: string}> = {
-      about: { title: 'Ben Kimim', content: 'Merhaba! Ben Yunus Emre ALSANCAK. Full-stack developer olarak çalışıyorum.' },
-      projects: { title: 'Projelerim', content: 'Geliştirdiğim projeler ve portföy çalışmalarım burada yer alıyor.' },
-      education: { title: 'Eğitim', content: 'Eğitim geçmişim ve aldığım sertifikalar hakkında bilgiler.' },
-      experience: { title: 'Deneyimlerim', content: 'Profesyonel iş deneyimlerim ve kariyerim hakkında detaylar.' },
-      startup: { title: 'Main Startup', content: 'Girişimcilik projelerim ve startup deneyimlerim.' },
+    const contents: Record<string, {title: string, content: string | JSX.Element}> = {
+      about: { 
+        title: '', 
+        content: (
+          <div className="space-y-8">
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <User className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-300">Hakkımda</h3>
+              </div>
+              <p className="text-gray-300 mb-6 leading-relaxed">
+                Ben Yunus Emre ALSANCAK, Mühendis ve Geliştiriciyim, Ayrıca Sportif aktiviteleri seviyorum.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
+                  <span className="text-blue-300">•</span>
+                  <p className="text-gray-300">Full Stack Developer</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className="text-blue-300">•</span>
+                  <p className="text-gray-300">AI Integrated Technologies</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <Code className="w-7 h-7 text-purple-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-purple-300">Yetenekler</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Python</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">YOLO</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">TensorFlow</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Dart</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Flutter</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Next.js</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Firebase</span>
+                </div>
+                <div className="flex items-center space-x-2 bg-purple-500/10 rounded-lg p-2">
+                  <span className="text-purple-300">•</span>
+                  <span className="text-gray-300">Supabase</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      },
+      projects: { 
+        title: 'Projelerim', 
+        content: (
+          <div className="space-y-8">
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Code className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-300">Öne Çıkan Projelerim</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div 
+                  onClick={() => window.open('https://github.com/YUNUSEMREALSANCAK/sign-language-interpreter-with-object-dedection', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-90 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <Brain className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <h4 className="font-bold text-lg text-purple-300">İşaret Dili Tercümanı</h4>
+                  </div>
+                  <p className="text-gray-300">YOLOv8 ile en çok kullanılan işaret dili kelimelerinin tanımlanması</p>
+                  <div className="mt-4 flex items-center space-x-2">
+                    <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-sm">Python</div>
+                    <div className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 text-sm">AI</div>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => window.open('https://github.com/YUNUSEMREALSANCAK/Alzheimer-s-Disease-Predictionn', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-90 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <Brain className="w-6 h-6 text-green-400" />
+                    </div>
+                    <h4 className="font-bold text-lg text-green-300">Alzheimer Tahmin Modeli</h4>
+                  </div>
+                  <p className="text-gray-300">Yapay zeka ile Alzheimer hastalığı tahmin modeli</p>
+                  <div className="mt-4 flex items-center space-x-2">
+                    <div className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-sm">Jupyter</div>
+                    <div className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-sm">ML</div>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => window.open('https://github.com/YUNUSEMREALSANCAK/Plantcareapp', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-90 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <Leaf className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <h4 className="font-bold text-lg text-blue-300">Plant Care App</h4>
+                  </div>
+                  <p className="text-gray-300">Bitki bakım ve takip uygulaması</p>
+                  <div className="mt-4 flex items-center space-x-2">
+                    <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm">Dart</div>
+                    <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm">Flutter</div>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => window.open('https://github.com/YUNUSEMREALSANCAK/spending-tracking-app-harcama-takip-uygulamas-', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-90 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                      <Wallet className="w-6 h-6 text-orange-400" />
+                    </div>
+                    <h4 className="font-bold text-lg text-orange-300">Bütçe Takip Uygulaması</h4>
+                  </div>
+                  <p className="text-gray-300">Kişisel harcama ve bütçe yönetimi uygulaması</p>
+                  <div className="mt-4 flex items-center space-x-2">
+                    <div className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 text-sm">Dart</div>
+                    <div className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-300 text-sm">Mobile</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      },
+      education: { 
+        title: 'Eğitim', 
+        content: (
+          <div className="space-y-8">
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <GraduationCap className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-300">Üniversite Eğitimi</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                2021-2025 yılları arasında Selçuk Üniversitesi Bilgisayar Mühendisliği bölümünden başarıyla mezun oldum.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <Rocket className="w-7 h-7 text-purple-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-purple-300">İlgi Alanları</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Üniversite yıllarımda savunma teknolojileri ve yapay zeka alanlarına özel ilgi duydum. SAVTEK (Savunma Teknolojileri Topluluğu) üyesi olarak çeşitli projelerde aktif rol aldım.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <Award className="w-7 h-7 text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-green-300">Yarışma Deneyimleri</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                İHA teknolojileri alanında düzenlenen yarışmalarda yer aldım - Sabit Kanat İHA ve Savaşan İHA kategorilerinde gerçek zamanlı nesne algılama ve görüntü işleme projeleri geliştirdim. Bu süreçte edindiğim deneyimler, problem çözme becerilerimi ve teknik uzmanlığımı önemli ölçüde geliştirdi.
+              </p>
+            </div>
+          </div>
+        )
+      },
+      experience: { 
+        title: 'Deneyimlerim', 
+        content: (
+          <div className="space-y-8">
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Briefcase className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-300">İş Deneyimleri</h3>
+              </div>
+              <div className="space-y-6">
+                <div 
+                  onClick={() => window.open('https://www.linkedin.com/in/yunus-emre-alsancak-95475a21b/', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-95 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-purple-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-purple-300">Intern</h4>
+                      <p className="text-sm text-gray-400">FLO Group · Stajyer</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-400 mb-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Ağustos 2025 - Eylül 2025 · 2 ay</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => window.open('https://www.linkedin.com/in/yunus-emre-alsancak-95475a21b/', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-95 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                      <Code className="w-6 h-6 text-green-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-green-300">Bilgi İşlem Programcısı</h4>
+                      <p className="text-sm text-gray-400">Eti Maden · Stajyer</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 mb-2">Mühendislik, Ağ Yönetimi</p>
+                  <div className="flex items-center space-x-2 text-sm text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    <span>Temmuz 2024 - Ağustos 2024 · 2 ay</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-400 mt-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>Bandırma, Balıkesir, Türkiye · Ofisten</span>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => window.open('https://www.linkedin.com/in/yunus-emre-alsancak-95475a21b/', '_blank')}
+                  className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-95 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30"
+                >
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <GraduationCap className="w-6 h-6 text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-lg text-blue-300">Bilgisayar Mühendisi</h4>
+                      <p className="text-sm text-gray-400">Selçuk Üniversitesi · Yarı zamanlı</p>
+                      <p className="text-sm text-gray-400">Araştırma Laboratuvarı Görevlisi</p>
+                    </div>
+                  </div>
+                  <p className="text-gray-300 mb-2">Z-Tree ve İstatistiksel Veri Analizi</p>
+                  <p className="text-gray-300 mb-2">Davranışsal ve Deneysel Araştırmalar Laboratuvarı</p>
+                  <div className="flex items-center space-x-2 text-sm text-gray-400">
+                    <Calendar className="w-4 h-4" />
+                    <span>Kasım 2023 - Haziran 2024 · 8 ay</span>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-400 mt-2">
+                    <MapPin className="w-4 h-4" />
+                    <span>Konya, Türkiye · Ofisten</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      },
+      startup: { 
+        title: 'Main Startup', 
+        content: (
+          <div className="space-y-8">
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Target className="w-7 h-7 text-blue-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-blue-300">Temel Hedefimiz</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Fitness koçlarının online koçluk hizmetlerini hızlı ve basit bir şekilde yönetmelerine olanak sağlamaktır. Bu sayede koçlar, müşterileriyle daha etkili iletişim kurabilir ve hizmet kalitelerini artırabilirler.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                  <Star className="w-7 h-7 text-purple-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-purple-300">Biz Neden Farklıyız?</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Kişisel online koçluk hizmetleri genellikle oldukça pahalıdır ve sonuçtan memnun kalmadığınız takdirde ciddi bir maddi kayba yol açabilir. Biz ise fitness koçlarımıza aylık üyelikleri uygun fiyatlarla sunarak, kolay erişilebilir bir hizmet modeli geliştiriyoruz.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30">
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <BarChart className="w-7 h-7 text-green-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-green-300">Sürekli Gelişim</h3>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Geri bildirimlerinizi her ay düzenli olarak değerlendirerek kendimizi sürekli geliştiriyor ve hizmet kalitemizi artırıyoruz. Bu yaklaşımımızla, hem koçların hem de müşterilerin memnuniyetini en üst seviyede tutmayı hedefliyoruz.
+              </p>
+            </div>
+          </div>
+        )
+      },
       thispc: { title: 'This PC', content: 'Bilgisayar dosyalarına ve sistem bilgilerine erişim.' },
       recyclebin: { title: 'Recycle Bin', content: 'Silinen dosyalar ve projeler burada saklanır.' },
       instagram: { title: 'Instagram', content: 'Instagram profilime buradan ulaşabilirsiniz.' },
       github: { title: 'GitHub', content: 'GitHub profilim ve açık kaynak projelerim.' },
-      email: { title: 'Email', content: 'Benimle email üzerinden iletişime geçin.' },
+      email: { title: 'Email', content: 'Benimle email(yunusemrealsancak@gmail.com.tr) üzerinden iletişime geçin.' },
       linkedin: { title: 'LinkedIn', content: 'LinkedIn profilim ve profesyonel ağım.' }
     };
     return contents[iconId] || { title: 'Bilinmeyen', content: 'İçerik bulunamadı.' };
@@ -563,16 +914,16 @@ function App() {
       {/* Desktop Interface */}
       <div className="flex h-full">
         {/* Left Sidebar with Desktop Icons */}
-        <div className="w-48 bg-transparent p-4 relative pt-12 overflow-visible">
+        <div className="w-40 sm:w-48 bg-transparent p-2 sm:p-4 relative pt-10 sm:pt-12 overflow-visible">
           {leftIcons.map((item) => {
             const IconComponent = item.icon;
             return (
               <div
                 key={item.id}
-                className={`absolute w-20 flex flex-col items-center cursor-pointer group transition-all duration-200 ${
+                className={`absolute w-16 sm:w-20 flex flex-col items-center cursor-pointer group transition-all duration-200 ${
                   item.isSelected 
-                    ? 'bg-blue-500/30 border border-blue-400/50 rounded-lg pt-3 px-2 pb-2' 
-                    : 'pt-3 px-2 pb-2 rounded-lg hover:bg-gray-700/30'
+                    ? 'bg-blue-500/30 border border-blue-400/50 rounded-lg pt-2 sm:pt-3 px-2 pb-1.5 sm:pb-2' 
+                    : 'pt-2 sm:pt-3 px-2 pb-1.5 sm:pb-2 rounded-lg hover:bg-gray-700/30'
                 } ${
                   item.isDoubleClicked 
                     ? 'scale-110 bg-blue-400/50' 
@@ -593,7 +944,7 @@ function App() {
                 }}
                 onMouseDown={(e) => handleMouseDown(e, item.id, false)}
               >
-                <div className={`w-12 h-12 rounded-lg shadow-sm flex items-center justify-center transition-all duration-200 ${
+                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg shadow-sm flex items-center justify-center transition-all duration-200 ${
                   item.isSelected 
                     ? 'bg-gray-700/90 border border-blue-400/30' 
                     : 'bg-gray-800/80 group-hover:bg-gray-700'
@@ -602,13 +953,13 @@ function App() {
                     ? 'bg-blue-600/50' 
                     : ''
                 }`}>
-                  <IconComponent className={`w-6 h-6 transition-colors duration-200 ${
+                  <IconComponent className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 ${
                     item.isSelected 
                       ? 'text-blue-300' 
                       : 'text-gray-300 group-hover:text-white'
                   }`} />
                 </div>
-                <span className={`text-xs mt-1 text-center leading-tight w-full transition-colors duration-200 ${
+                <span className={`text-[10px] sm:text-xs mt-1 text-center leading-tight w-full transition-colors duration-200 ${
                   item.isSelected 
                     ? 'text-blue-200' 
                     : 'text-gray-300 group-hover:text-white'
@@ -627,38 +978,38 @@ function App() {
       </div>
 
       {/* CENTERED TEXT - Fixed positioning for perfect center */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-5">
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-5 px-3">
         <div className="text-center">
-          <h1 className="text-8xl font-normal mb-8 leading-tight py-6 tracking-wider text-blue-400 italic"
+          <h1 className="text-4xl sm:text-6xl md:text-8xl font-light mb-4 sm:mb-6 md:mb-8 leading-tight py-3 sm:py-4 md:py-6 tracking-wide sm:tracking-wider text-blue-400/90"
               style={{
-                fontFamily: '"Tourney", sans-serif',
-                fontWeight: 400,
-                fontVariationSettings: '"wdth" 100',
-                textShadow: '0 4px 8px rgba(0,0,0,0.6)',
-                letterSpacing: '0.02em',
-                fontStyle: 'italic'
+                fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontWeight: 300,
+                textShadow: '0 4px 16px rgba(96, 165, 250, 0.3)',
+                letterSpacing: '0.03em'
               }}>
             HOŞGELDİNİZ
           </h1>
-          <p className="text-4xl mb-6 font-bold tracking-wider text-green-400" 
+          <p className="text-2xl sm:text-3xl md:text-4xl mb-4 sm:mb-5 md:mb-6 font-semibold tracking-wide text-green-400/90" 
              style={{ 
-               fontFamily: '"Fira Code", "JetBrains Mono", "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace',
-               textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+               fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+               textShadow: '0 2px 8px rgba(74, 222, 128, 0.2)',
+               letterSpacing: '0.02em'
              }}>
             Yunus Emre ALSANCAK
           </p>
-          <div className="space-y-3 text-cyan-300">
-            <p className="text-3xl font-bold tracking-wider" 
-               style={{ 
-                 fontFamily: '"JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace',
-                 letterSpacing: '0.15em',
-                 textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+          <div className="space-y-2 sm:space-y-3 text-cyan-300/90">
+            <p className="text-xl sm:text-2xl md:text-3xl font-medium tracking-wide"
+               style={{
+                 fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                 letterSpacing: '0.02em',
+                 textShadow: '0 2px 8px rgba(34, 211, 238, 0.2)'
                }}>
               WebOS
             </p>
-            <p className="text-lg font-medium text-gray-300" 
+            <p className="text-base sm:text-lg font-normal text-gray-300/90" 
                style={{ 
-                 fontFamily: '"Fira Code", "JetBrains Mono", "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace'
+                 fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                 letterSpacing: '0.01em'
                }}>
               Klasörlere tıklayarak keşfedin
             </p>
@@ -667,9 +1018,9 @@ function App() {
         </div>
 
       {/* MacOS-style Bottom Taskbar */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="backdrop-blur-md rounded-2xl px-4 py-2 shadow-2xl border bg-gray-800/90 border-gray-700/50">
-          <div className="flex items-center space-x-3">
+      <div className="fixed bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 z-50">
+        <div className="backdrop-blur-md rounded-2xl px-3 sm:px-4 py-1.5 sm:py-2 shadow-2xl border bg-gray-800/90 border-gray-700/50">
+          <div className="flex items-center space-x-2 sm:space-x-3">
             {openWindows.map((window) => {
               // Find the original icon for this window
               const originalIcon = leftIcons.find(icon => icon.id === window.id);
@@ -679,7 +1030,7 @@ function App() {
                 <button
                   key={window.id}
                   onClick={() => window.isMinimized ? restoreWindow(window.id) : minimizeWindow(window.id)}
-                  className={`w-12 h-12 rounded-xl transition-all duration-300 ${
+                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl transition-all duration-300 ${
                     window.isMinimized 
                       ? 'bg-gray-700/50 scale-90 opacity-70' 
                       : 'bg-gray-600/80 scale-100 shadow-lg'
@@ -688,7 +1039,7 @@ function App() {
                 >
                   <div className="w-full h-full rounded-xl flex items-center justify-center bg-gradient-to-br from-white/10 to-white/5">
                     {IconComponent ? (
-                      <IconComponent className="w-6 h-6 text-white" />
+                      <IconComponent className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                     ) : (
                       <span className="text-xs font-medium text-white">
                         {window.title.charAt(0)}
@@ -751,15 +1102,15 @@ function App() {
           <div className="rounded-2xl shadow-2xl border h-full flex flex-col overflow-hidden backdrop-blur-sm relative bg-gradient-to-br from-gray-900 to-gray-800 border-gray-600/50">
             {/* Modern Title Bar */}
             <div 
-              className="px-6 py-4 flex items-center justify-between border-b select-none backdrop-blur-md cursor-grab active:cursor-grabbing bg-gradient-to-r from-gray-800/90 to-gray-700/90 border-gray-600/30"
+              className="px-3 sm:px-6 py-3 sm:py-4 flex items-center justify-between border-b select-none backdrop-blur-md cursor-grab active:cursor-grabbing bg-gradient-to-r from-gray-800/90 to-gray-700/90 border-gray-600/30"
               onMouseDown={(e) => handleWindowMouseDown(e, window.id)}
             >
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
-                    <span className="text-white text-sm">📁</span>
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow-sm">
+                    <span className="text-white text-xs sm:text-sm">📁</span>
                   </div>
-                  <h3 className="font-semibold text-lg text-white">{window.title}</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-white">{window.title}</h3>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -769,55 +1120,30 @@ function App() {
                     console.log(`Minimizing window: ${window.id}`);
                     minimizeWindow(window.id);
                   }}
-                  className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
                   title="Minimize"
                 >
-                  <span className="text-gray-800 text-sm font-bold">−</span>
+                  <span className="text-gray-800 text-xs sm:text-sm font-bold">−</span>
                 </button>
                 <button 
                   onClick={() => closeWindow(window.id)}
-                  className="w-8 h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
+                  className="w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg flex items-center justify-center transition-all shadow-lg hover:shadow-xl"
                   title="Close"
                 >
-                  <span className="text-white text-sm font-bold">×</span>
+                  <span className="text-white text-xs sm:text-sm font-bold">×</span>
                 </button>
         </div>
       </div>
 
             {/* Window Content */}
-            <div className="flex-1 p-8 overflow-auto bg-gradient-to-br from-gray-800 to-gray-900 text-white">
+            <div className="flex-1 p-4 sm:p-6 md:p-8 overflow-auto bg-gradient-to-br from-gray-800 to-gray-900 text-white">
               <div className="space-y-6">
-                <h2 className="text-3xl font-bold mb-4 text-white">{window.title}</h2>
-                <p className="text-xl leading-relaxed text-gray-200">{window.content}</p>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4 text-white">{window.title}</h2>
+                <p className="text-base sm:text-lg md:text-xl leading-relaxed text-gray-200">{window.content}</p>
                 
                 {/* Sample content based on window type */}
-                {window.id === 'projects' && (
-                  <div className="grid grid-cols-2 gap-6 mt-8">
-                    <div className="p-6 rounded-xl border transition-all hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/30 hover:border-blue-500/50">
-                      <h3 className="font-bold text-lg mb-3 text-white">🌐 WebOS Projesi</h3>
-                      <p className="leading-relaxed text-gray-300">React & TypeScript ile geliştirilen interaktif masaüstü deneyimi</p>
-                      <div className="mt-4 px-3 py-1 bg-blue-500/20 text-blue-300 text-sm rounded-full inline-block">✨ Aktif Proje</div>
-                    </div>
-                    <div className="p-6 rounded-xl border transition-all hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-gray-700/50 to-gray-800/50 border-gray-600/30 hover:border-green-500/50">
-                      <h3 className="font-bold text-lg mb-3 text-white">🛒 E-ticaret Platformu</h3>
-                      <p className="leading-relaxed text-gray-300">Full-stack e-ticaret çözümü ve ödeme sistemi</p>
-                      <div className="mt-4 px-3 py-1 bg-green-500/20 text-green-300 text-sm rounded-full inline-block">✅ Tamamlandı</div>
-                    </div>
-                  </div>
-                )}
                 
-                {window.id === 'about' && (
-                  <div className="space-y-6 mt-8">
-                    <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
-                      <h3 className="font-bold text-lg mb-3 text-blue-300">👨‍💻 Hakkımda</h3>
-                      <p className="leading-relaxed text-gray-300">Full-stack developer, React & Node.js uzmanı. Modern web teknolojileri ile kullanıcı deneyimi odaklı çözümler geliştiriyorum.</p>
-                    </div>
-                    <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30">
-                      <h3 className="font-bold text-lg mb-3 text-green-300">🚀 Yetenekler</h3>
-                      <p className="leading-relaxed text-gray-300">JavaScript, TypeScript, React, Node.js, Python, MongoDB, PostgreSQL, AWS</p>
-                    </div>
-                  </div>
-                )}
+                
 
                 {window.id === 'recyclebin' && (
                   <div className="space-y-6 mt-8">
