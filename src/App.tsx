@@ -550,6 +550,21 @@ function App() {
         title: 'Main Startup', 
         content: (
           <div className="space-y-8">
+            <div 
+              onClick={() => window.open('https://nextcoach.online/', '_blank')}
+              className="p-6 rounded-xl border cursor-pointer transition-all hover:scale-95 hover:shadow-lg backdrop-blur-sm bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                  <Rocket className="w-7 h-7 text-green-400" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-xl text-green-300">Startup'ı Ziyaret Et</h4>
+                  <p className="text-sm text-gray-400">nextcoach.online</p>
+                </div>
+              </div>
+            </div>
+
             <div className="p-6 rounded-xl border backdrop-blur-sm bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/30">
               <div className="flex items-center space-x-4 mb-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
